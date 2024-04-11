@@ -2,6 +2,10 @@
     "compilerOptions": {
         "module": "NodeNext",
         "sourceMap": true,
-        "jsx": "react-jsx"
+        "jsx": "react-jsx",
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "allowImportingTsExtensions": true,
+        "plugins": [{ "name": "typescript-plugin-css-modules" }]
     }
 }
