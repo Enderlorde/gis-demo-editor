@@ -13,9 +13,16 @@ type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
 };
 
 export default function DrawControl(props: DrawControlProps) {
+    let mbd;
     useControl<MapboxDraw>(
-        () => new MapboxDraw(props),
+        () => {
+            console.log("create");
+            mbd = new MapboxDraw(props);
+            return mbd;
+        },
         ({ map }) => {
+            console.log(props);
+
             map.on("draw.create", props.onCreate);
             map.on("draw.update", props.onUpdate);
             map.on("draw.delete", props.onDelete);
@@ -27,7 +34,6 @@ export default function DrawControl(props: DrawControlProps) {
         },
         { position: props.position }
     );
-
     return null;
 }
 

@@ -10,14 +10,14 @@ const Dropdown = (props) => {
                 className={styles.dropdown__icon}
             />
             <select
+                onChange={props.onChange}
                 className={styles.dropdown}
-                name="cars"
-                id="cars"
+                name="color"
+                id="colorSelect"
             >
-                <option value="volvo">Volvo</option>
-                <option value="saab">Saab</option>
-                <option value="mercedes">Mercedes</option>
-                <option value="audi">Audi</option>
+                <option value="red">Red</option>
+                <option value="green">Green</option>
+                <option value="blue">Blue</option>
             </select>
         </div>
     );
