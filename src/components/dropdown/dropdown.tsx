@@ -15,9 +15,10 @@ const Dropdown = (props) => {
                 name="color"
                 id="colorSelect"
             >
-                <option value="red">Red</option>
-                <option value="green">Green</option>
-                <option value="blue">Blue</option>
+                <option value="45">45</option>
+                <option value="argyle">Argyle</option>
+                <option value="carbon">Carbon</option>
+                <option value="tile">Tile</option>
             </select>
         </div>
     );

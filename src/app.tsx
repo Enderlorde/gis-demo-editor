@@ -5,6 +5,7 @@ import { Map, ScaleControl } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 
 import Dropdown from "./components/dropdown/dropdown.tsx";
+import ControlPanel from "./components/control-panel/control-panel.tsx";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -12,42 +13,56 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import DrawControl from "./components/draw-control/draw-control.ts";
 const App = () => {
     const [features, setFeatures] = useState({});
-    const [color, setColor] = useState("red");
-    const [mbd, setMbd] = useState();
+    const [currPolygon, setCurrPolygon] = useState({});
+    const [color, setColor] = useState();
     const mapRef = useRef<MapRef>();
+    const ref = useRef(color);
 
     useEffect(() => {
         console.log(features);
     }, [features]);
 
-    const onMapLoad = () => {
-        mapRef.current
-            .loadImage(
-                "https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Cat_silhouette.svg/64px-Cat_silhouette.svg.png"
-            )
-            .then((response) =>
-                mapRef.current.addImage("pattern", response.data)
-            );
+    useEffect(() => {
+        console.log(color);
+        ref.current = color;
+    }, [color]);
+
+    const mapClickHandler = (e) => {
+        console.log(e);
     };
 
-    const onUpdate = useCallback(
-        (e) => {
-            console.log(color);
+    const onMapLoad = () => {
+        mapRef.current
+            .loadImage("./static/45.png")
+            .then((response) => mapRef.current.addImage("45", response.data));
+        mapRef.current
+            .loadImage("./static/argyle.png")
+            .then((response) =>
+                mapRef.current.addImage("argyle", response.data)
+            );
+        mapRef.current
+            .loadImage("./static/carbon.png")
+            .then((response) =>
+                mapRef.current.addImage("carbon", response.data)
+            );
+        mapRef.current
+            .loadImage("./static/tile.png")
+            .then((response) => mapRef.current.addImage("tile", response.data));
+    };
 
-            setFeatures((currFeatures) => {
-                const newFeatures = { ...currFeatures };
-                for (const f of e.features) {
-                    newFeatures[f.id] = f;
-                }
-                return newFeatures;
-            });
-        },
-        [color]
-    );
+    const onUpdate = useCallback((e, mbd) => {
+        mbd.setFeatureProperty(e.features[0].id, "fill", ref.current);
+
+        setFeatures((currFeatures) => {
+            const newFeatures = { ...currFeatures };
+            for (const f of e.features) {
+                newFeatures[f.id] = f;
+            }
+            return newFeatures;
+        });
+    }, []);
 
     const onDelete = useCallback((e) => {
-        console.log(e);
-
         setFeatures((currFeatures) => {
             const newFeatures = { ...currFeatures };
             for (const f of e.features) {
@@ -60,6 +75,7 @@ const App = () => {
     return (
         <Map
             onLoad={() => onMapLoad()}
+            onClick={(e) => mapClickHandler(e)}
             ref={mapRef}
             id="map"
             initialViewState={{
@@ -241,18 +257,17 @@ const App = () => {
                         },
                     },
                     {
-                        id: "gl-draw-polygon-fill-blue-static",
+                        id: "gl-draw-polygon-fill-color-static",
                         type: "fill",
                         filter: [
                             "all",
                             ["==", "$type", "Polygon"],
                             ["==", "active", "false"],
-                            ["==", "user_someshit", "red"],
+                            ["has", "user_fill"],
                         ],
                         paint: {
-                            "fill-color": "blue",
+                            "fill-pattern": ["get", "user_fill"],
                             "fill-outline-color": "#000",
-                            "fill-opacity": 0.1,
                         },
                     },
                     // polygon outline
@@ -284,6 +299,7 @@ const App = () => {
                     setColor(e.target.value);
                 }}
             />
+            <ControlPanel polygons={Object.values(features)} />
             <ScaleControl />
         </Map>
     );

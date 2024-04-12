@@ -1,0 +1,9 @@
+.control-panel {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+
+    transform: translate(-100%, -100%);
+
+    background-color: white;
+}
