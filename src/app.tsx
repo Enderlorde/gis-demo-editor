@@ -4,13 +4,16 @@ import ReactDOM from "react-dom/client";
 import { Map, ScaleControl } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 
+import RadiusMode from "./radius-mode.ts";
+
 import Dropdown from "./components/dropdown/dropdown.tsx";
-import ControlPanel from "./components/control-panel/control-panel.tsx";
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import DrawControl from "./components/draw-control/draw-control.ts";
+import MapboxDraw from "@mapbox/mapbox-gl-draw";
+
 const App = () => {
     const [features, setFeatures] = useState({});
     const [currPolygon, setCurrPolygon] = useState({});
@@ -26,10 +29,6 @@ const App = () => {
         console.log(color);
         ref.current = color;
     }, [color]);
-
-    const mapClickHandler = (e) => {
-        console.log(e);
-    };
 
     const onMapLoad = () => {
         mapRef.current
@@ -75,7 +74,6 @@ const App = () => {
     return (
         <Map
             onLoad={() => onMapLoad()}
-            onClick={(e) => mapClickHandler(e)}
             ref={mapRef}
             id="map"
             initialViewState={{
@@ -94,11 +92,12 @@ const App = () => {
                     {
                         id: "baselayer",
                         type: "raster",
-                        source: "osm_raster",
+                        source: "osmRaster",
                     },
                 ],
+                glyphs: "https://tiles.versatiles.org/assets/fonts/{fontstack}/{range}.pbf",
                 sources: {
-                    osm_raster: {
+                    osmRaster: {
                         type: "raster",
                         tiles: [
                             "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -122,6 +121,25 @@ const App = () => {
                 }}
                 userProperties={true}
                 styles={[
+                    {
+                        id: "gl-draw-point-lable",
+                        type: "symbol",
+                        filter: ["all", ["==", "$type", "Point"]],
+                        layout: {
+                            "text-field": ["get", "radiusMetric"],
+                            "text-font": ["noto_sans_regular"],
+                            "text-offset": [0, 1],
+                        },
+                    },
+                    {
+                        id: "gl-draw-point",
+                        type: "circle",
+                        filter: ["all", ["==", "$type", "Point"]],
+                        paint: {
+                            "circle-radius": 7,
+                            "circle-color": "#000",
+                        },
+                    },
                     // ACTIVE (being drawn)
                     // line stroke
                     {
@@ -289,7 +307,11 @@ const App = () => {
                         },
                     },
                 ]}
-                defaultMode="draw_polygon"
+                modes={{
+                    ...MapboxDraw.modes,
+                    ["radius_mode"]: RadiusMode,
+                }}
+                defaultMode="radius_mode"
                 onCreate={onUpdate}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
@@ -299,7 +321,6 @@ const App = () => {
                     setColor(e.target.value);
                 }}
             />
-            <ControlPanel polygons={Object.values(features)} />
             <ScaleControl />
         </Map>
     );
