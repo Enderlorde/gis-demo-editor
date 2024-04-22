@@ -9,6 +9,7 @@ type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
     onCreate?: (evt: { features: object[] }, mbd: any) => void;
     onUpdate?: (evt: { features: object[]; action: string }, mbd: any) => void;
     onDelete?: (evt: { features: object[] }) => void;
+    onModeChange?: (evt: { features: object[] }, mbd: any) => void;
 };
 
 export default function DrawControl(props: DrawControlProps) {
@@ -21,10 +22,9 @@ export default function DrawControl(props: DrawControlProps) {
             return mbd;
         },
         ({ map }) => {
-            console.log(props);
-
             map.on("draw.create", (e) => props.onCreate(e, mbd));
             map.on("draw.update", (e) => props.onCreate(e, mbd));
+            map.on("draw.modechange", (e) => props.onModeChange(e, mbd));
             map.on("draw.delete", props.onDelete);
         },
         ({ map }) => {
@@ -41,4 +41,5 @@ DrawControl.defaultProps = {
     onCreate: () => {},
     onUpdate: () => {},
     onDelete: () => {},
+    onModeChange: () => {},
 };

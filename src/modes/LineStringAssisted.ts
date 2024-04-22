@@ -1,7 +1,6 @@
 import MapboxDraw, {
     DrawCustomMode,
     DrawCustomModeThis,
-    DrawFeature,
     DrawLineString,
     constants,
 } from "@mapbox/mapbox-gl-draw";
@@ -11,7 +10,9 @@ import { MapGeoJSONFeature } from "react-map-gl";
 import { Coordinates } from "maplibre-gl";
 
 type featureOptions = {
-    featureID?: string;
+    //ID линии
+    featureId: string;
+    //Крайняя точка, с которой необходимо продолжать линию
     from?: Feature<Point> | Point | number[];
 };
 
@@ -21,29 +22,7 @@ type State = {
     direction?: string;
 };
 
-type LineStringAssistedMode =
-    | (DrawCustomMode & {
-          clickAnywhere(
-              state: State,
-              evt: MapMouseEvent
-          ): FunctionStringCallback;
-          clickOnVertex(
-              state: State,
-              evt: MapMouseEvent
-          ): FunctionStringCallback;
-      })
-    | (DrawCustomModeThis & {
-          clickAnywhere(
-              state: State,
-              evt: MapMouseEvent
-          ): FunctionStringCallback;
-          clickOnVertex(
-              state: State,
-              evt: MapMouseEvent
-          ): FunctionStringCallback;
-      });
-
-const isEventAtCoordinates = (evt: MapMouseEvent, coordinates: number[]) => {
+const isEventAtCoordinates = (evt: MapMouseEvent, coordinates: Position) => {
     if (!evt.lngLat) return false;
     return (
         evt.lngLat.lng === coordinates[0] && evt.lngLat.lat === coordinates[1]
@@ -51,7 +30,7 @@ const isEventAtCoordinates = (evt: MapMouseEvent, coordinates: number[]) => {
 };
 
 const isVertex = (e): boolean => {
-    const featureTarget = e.target.getFe;
+    const featureTarget = e.featureTarget;
     if (!featureTarget) return false;
     if (!featureTarget.properties) return false;
     return featureTarget.properties.meta === constants.meta.VERTEX;
@@ -88,19 +67,21 @@ const createVertex = (
     };
 };
 
-const LineStringAssistedMode: LineStringAssistedMode = {
-    //Triggered when a mode is selected
-    //
+const LineStringAssistedMode: DrawCustomMode & {
+    clickAnywhere?(state: State, evt: MapMouseEvent): void;
+    clickOnVertex?(state: State, evt: MapMouseEvent): void;
+} = {
+    //Запускаетсякогда режим выбран
     onSetup(options: featureOptions): State {
         options = options || <featureOptions>{};
-        const featureID: string = options.featureID;
+        const featureId: string = options.featureId;
 
         let line: DrawLineString, currentVertexPosition;
         let direction: string = "forward";
 
-        //if ID presented, line is going to modify
-        if (featureID) {
-            line = <DrawLineString>this.getFeature(featureID);
+        //Если из предыдущего режима передан featureId - продолжить рисование линии из точки from
+        if (featureId) {
+            line = <DrawLineString>this.getFeature(featureId);
 
             if (!line) {
                 throw new Error("Не могу найти feature с таким ID");
@@ -163,6 +144,7 @@ const LineStringAssistedMode: LineStringAssistedMode = {
             }
             //If ID not provided then adding new line
         } else {
+            //Создаем пустой feature линии как только перешли в режим и предыдущий режим не передал options
             line = <DrawLineString>this.newFeature({
                 type: constants.geojsonTypes.FEATURE,
                 properties: {},
@@ -176,15 +158,15 @@ const LineStringAssistedMode: LineStringAssistedMode = {
         }
 
         this.clearSelectedFeatures();
-        this.updateUIClasses({
+        /* this.updateUIClasses({
             mouse: constants.cursors.ADD,
-        });
-        this.activateUIButton(constants.types.LINE);
-        this.setActionableState({
-            trash: true,
+        }); */
+        /* this.activateUIButton(constants.types.LINE); */
+        /* this.setActionableState({
+            trash: false,
             combineFeatures: false,
             uncombineFeatures: false,
-        });
+        }); */
 
         return {
             line,
@@ -193,7 +175,9 @@ const LineStringAssistedMode: LineStringAssistedMode = {
         };
     },
 
+    //Функция, которая вызывается по клику в любом месте кроме вершины
     clickAnywhere(state, evt) {
+        //Выход из режима, если крайняя точка совпадает с начальной
         if (
             (state.currentVertexPosition > 0 &&
                 isEventAtCoordinates(
@@ -211,12 +195,13 @@ const LineStringAssistedMode: LineStringAssistedMode = {
             });
         }
 
-        this.updateUIClasses({ mouse: constants.cursors.ADD });
-        state.line.updateCoordinate(
+        //
+        /* this.updateUIClasses({ mouse: constants.cursors.ADD }); */
+        /* state.line.updateCoordinate(
             state.currentVertexPosition.toString(),
             evt.lngLat.lng,
             evt.lngLat.lat
-        );
+        ); */
         if (state.direction === "forward") {
             state.currentVertexPosition++;
             state.line.updateCoordinate(
@@ -225,13 +210,15 @@ const LineStringAssistedMode: LineStringAssistedMode = {
                 evt.lngLat.lat
             );
         } else {
+            //????????????
             state.line.addCoordinate("0", evt.lngLat.lng, evt.lngLat.lat);
         }
     },
 
+    //По нажатиюна вершину выходим в режим SIMPLE_SELECT и передаем текущую линию как выделенную по умолчанию
     clickOnVertex(state, evt) {
-        return this.changeMode(constants.modes.SIMPLE_SELECT, {
-            featureIds: state.line.id,
+        this.changeMode(constants.modes.SIMPLE_SELECT, {
+            featureIds: [state.line.id],
         });
     },
 
@@ -242,13 +229,12 @@ const LineStringAssistedMode: LineStringAssistedMode = {
             evt.lngLat.lat
         );
         if (isVertex(evt)) {
-            this.updateUIClasses({ mouse: constants.cursors.POINTER });
+            console.log("VERTEX!");
+            /* this.updateUIClasses({ mouse: constants.cursors.POINTER }); */
         }
     },
 
     onClick(state: State, evt: MapMouseEvent) {
-        console.log("8=======================================э");
-
         if (isVertex(evt)) return this.clickOnVertex(state, evt);
         this.clickAnywhere(state, evt);
     },
@@ -267,7 +253,7 @@ const LineStringAssistedMode: LineStringAssistedMode = {
     },
 
     onStop(state: State) {
-        this.activateUIButton();
+        /* this.activateUIButton(); */
         if (this.getFeature(state.line.id.toString()) === undefined) return;
 
         state.line.removeCoordinate(`${state.currentVertexPosition}`);

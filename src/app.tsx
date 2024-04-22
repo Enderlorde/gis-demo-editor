@@ -14,7 +14,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import DrawControl from "./components/draw-control/draw-control.ts";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 
-import CustomLineMode from "./modes/LineStringAssisted.ts";
+import LineStringAssisted from "./modes/LineStringAssisted.ts";
 
 const App = () => {
     const [features, setFeatures] = useState({});
@@ -71,6 +71,11 @@ const App = () => {
             }
             return newFeatures;
         });
+    }, []);
+
+    const modeChangeHandler = useCallback((e, mbd: MapboxDraw) => {
+        console.log(mbd.getMode());
+        //mbd.changeMode("draw_assisted_line_string");
     }, []);
 
     return (
@@ -311,12 +316,13 @@ const App = () => {
                 ]}
                 modes={{
                     ...MapboxDraw.modes,
-                    ["CustomMode"]: CustomLineMode,
+                    ["draw_assisted_line_string"]: LineStringAssisted,
                 }}
-                defaultMode="CustomMode"
+                defaultMode="draw_assisted_line_string"
                 onCreate={onUpdate}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
+                onModeChange={modeChangeHandler}
             />
             <Dropdown
                 onChange={(e) => {
