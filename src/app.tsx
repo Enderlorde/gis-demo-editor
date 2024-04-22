@@ -14,6 +14,8 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import DrawControl from "./components/draw-control/draw-control.ts";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 
+import CustomLineMode from "./modes/LineStringAssisted.ts";
+
 const App = () => {
     const [features, setFeatures] = useState({});
     const [currPolygon, setCurrPolygon] = useState({});
@@ -309,9 +311,9 @@ const App = () => {
                 ]}
                 modes={{
                     ...MapboxDraw.modes,
-                    ["radius_mode"]: RadiusMode,
+                    ["CustomMode"]: CustomLineMode,
                 }}
-                defaultMode="radius_mode"
+                defaultMode="CustomMode"
                 onCreate={onUpdate}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
