@@ -1,13 +1,16 @@
-import MapboxDraw, {
+import {
     DrawCustomMode,
-    DrawCustomModeThis,
     DrawLineString,
     constants,
 } from "@mapbox/mapbox-gl-draw";
-import type { Point, Feature, Position } from "geojson";
+import type { Point, Feature, Position, FeatureCollection } from "geojson";
 import { MapMouseEvent } from "@mapbox/mapbox-gl-draw";
 import { MapGeoJSONFeature } from "react-map-gl";
-import { Coordinates } from "maplibre-gl";
+import midpoint from "@turf/midpoint";
+import length from "@turf/length";
+import { round } from "@turf/helpers";
+import distance from "@turf/distance";
+import * as _ from "lodash";
 
 type featureOptions = {
     //ID линии
@@ -48,17 +51,16 @@ const createVertex = (
     parentId: string,
     coordinates: Position,
     path: string,
-    selected: any
+    distance: string
 ) => {
     return {
         type: constants.geojsonTypes.FEATURE,
         properties: {
-            meta: constants.meta.VERTEX,
+            meta: constants.meta.FEATURE,
             parent: parentId,
             coord_path: path,
-            active: selected
-                ? constants.activeStates.ACTIVE
-                : constants.activeStates.INACTIVE,
+            active: constants.activeStates.INACTIVE,
+            distance: distance,
         },
         geometry: {
             type: constants.geojsonTypes.POINT,
@@ -71,7 +73,7 @@ const LineStringAssistedMode: DrawCustomMode & {
     clickAnywhere?(state: State, evt: MapMouseEvent): void;
     clickOnVertex?(state: State, evt: MapMouseEvent): void;
 } = {
-    //Запускаетсякогда режим выбран
+    //Запускается когда режим выбран
     onSetup(options: featureOptions): State {
         options = options || <featureOptions>{};
         const featureId: string = options.featureId;
@@ -197,11 +199,11 @@ const LineStringAssistedMode: DrawCustomMode & {
 
         //
         /* this.updateUIClasses({ mouse: constants.cursors.ADD }); */
-        /* state.line.updateCoordinate(
+        state.line.updateCoordinate(
             state.currentVertexPosition.toString(),
             evt.lngLat.lng,
             evt.lngLat.lat
-        ); */
+        );
         if (state.direction === "forward") {
             state.currentVertexPosition++;
             state.line.updateCoordinate(
@@ -215,7 +217,7 @@ const LineStringAssistedMode: DrawCustomMode & {
         }
     },
 
-    //По нажатиюна вершину выходим в режим SIMPLE_SELECT и передаем текущую линию как выделенную по умолчанию
+    //По нажатию на вершину выходим в режим SIMPLE_SELECT и передаем текущую линию как выделенную по умолчанию
     clickOnVertex(state, evt) {
         this.changeMode(constants.modes.SIMPLE_SELECT, {
             featureIds: [state.line.id],
@@ -228,13 +230,16 @@ const LineStringAssistedMode: DrawCustomMode & {
             evt.lngLat.lng,
             evt.lngLat.lat
         );
+        evt.target.getCanvas().style.cursor = "crosshair";
         if (isVertex(evt)) {
             console.log("VERTEX!");
+            evt.target.getCanvas().style.cursor = "pointer";
             /* this.updateUIClasses({ mouse: constants.cursors.POINTER }); */
         }
     },
 
     onClick(state: State, evt: MapMouseEvent) {
+        evt.target.getCanvas().style.cursor = "default";
         if (isVertex(evt)) return this.clickOnVertex(state, evt);
         this.clickAnywhere(state, evt);
     },
@@ -279,7 +284,7 @@ const LineStringAssistedMode: DrawCustomMode & {
 
     toDisplayFeatures(
         state: State,
-        geojson: MapGeoJSONFeature & { geometry: { coordinates: Coordinates } },
+        geojson: MapGeoJSONFeature & { geometry: { coordinates: Position[] } },
         display
     ) {
         const isActiveLine = geojson.properties.id == state.line.id;
@@ -290,23 +295,23 @@ const LineStringAssistedMode: DrawCustomMode & {
         if (!isActiveLine) return display(geojson);
         if (geojson.geometry.coordinates.length < 2) return;
         geojson.properties.meta = constants.meta.FEATURE;
+        const distance = `${round(length(geojson), 2)} km`;
         display(
             createVertex(
                 state.line.id.toString(),
                 geojson.geometry.coordinates[
                     state.direction === "forward"
-                        ? geojson.geometry.coordinates.length - 2
+                        ? geojson.geometry.coordinates.length - 1
                         : 1
                 ],
                 `${
                     state.direction === "forward"
-                        ? geojson.geometry.coordinates.length - 2
+                        ? geojson.geometry.coordinates.length - 1
                         : 1
                 }`,
-                false
+                distance
             )
         );
-
         display(geojson);
     },
 };

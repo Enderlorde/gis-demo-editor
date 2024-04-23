@@ -34,6 +34,11 @@ const App = () => {
 
     const onMapLoad = () => {
         mapRef.current
+            .loadImage("./static/bubble.png")
+            .then((response) =>
+                mapRef.current.addImage("bubble", response.data)
+            );
+        mapRef.current
             .loadImage("./static/45.png")
             .then((response) => mapRef.current.addImage("45", response.data));
         mapRef.current
@@ -131,11 +136,15 @@ const App = () => {
                     {
                         id: "gl-draw-point-lable",
                         type: "symbol",
-                        filter: ["all", ["==", "$type", "Point"]],
+                        filter: [
+                            "all",
+                            ["==", "$type", "Point"],
+                            ["has", "distance"],
+                        ],
                         layout: {
-                            "text-field": ["get", "radiusMetric"],
+                            "text-field": ["get", "distance"],
                             "text-font": ["noto_sans_regular"],
-                            "text-offset": [0, 1],
+                            "text-offset": [0, -2],
                         },
                     },
                     {

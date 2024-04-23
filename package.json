@@ -9,8 +9,12 @@
     "dependencies": {
         "@mapbox/mapbox-gl-draw": "^1.4.3",
         "@turf/area": "^6.5.0",
+        "@turf/distance": "^6.5.0",
+        "@turf/helpers": "^6.5.0",
         "@turf/length": "^6.5.0",
+        "@turf/midpoint": "^6.5.0",
         "@turf/turf": "^6.5.0",
+        "lodash": "^4.17.21",
         "mapbox-gl": "^3.3.0",
         "maplibre-gl": "^4.1.2",
         "numeral": "^2.0.6",
