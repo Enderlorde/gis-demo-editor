@@ -5,12 +5,11 @@ import {
 } from "@mapbox/mapbox-gl-draw";
 import type { Point, Feature, Position, FeatureCollection } from "geojson";
 import { MapMouseEvent } from "@mapbox/mapbox-gl-draw";
-import { MapGeoJSONFeature } from "react-map-gl";
+import { MapGeoJSONFeature, MapboxGeoJSONFeature } from "react-map-gl";
 import midpoint from "@turf/midpoint";
 import length from "@turf/length";
 import { round } from "@turf/helpers";
 import distance from "@turf/distance";
-import * as _ from "lodash";
 
 type featureOptions = {
     //ID линии
@@ -23,6 +22,8 @@ type State = {
     line?: DrawLineString;
     currentVertexPosition?: number;
     direction?: string;
+    vertexPositions?: MapGeoJSONFeature[];
+    distance?: number;
 };
 
 const isEventAtCoordinates = (evt: MapMouseEvent, coordinates: Position) => {
@@ -78,8 +79,9 @@ const LineStringAssistedMode: DrawCustomMode & {
         options = options || <featureOptions>{};
         const featureId: string = options.featureId;
 
-        let line: DrawLineString, currentVertexPosition;
+        let line: DrawLineString, currentVertexPosition, vertexPositions;
         let direction: string = "forward";
+        let distance = 0;
 
         //Если из предыдущего режима передан featureId - продолжить рисование линии из точки from
         if (featureId) {
@@ -156,6 +158,7 @@ const LineStringAssistedMode: DrawCustomMode & {
                 },
             });
             currentVertexPosition = 0;
+            vertexPositions = [];
             this.addFeature(line);
         }
 
@@ -174,6 +177,8 @@ const LineStringAssistedMode: DrawCustomMode & {
             line,
             currentVertexPosition,
             direction,
+            vertexPositions,
+            distance,
         };
     },
 
@@ -206,6 +211,17 @@ const LineStringAssistedMode: DrawCustomMode & {
         );
         if (state.direction === "forward") {
             state.currentVertexPosition++;
+            if (state.currentVertexPosition > 1)
+                state.vertexPositions.push(
+                    this.newFeature({
+                        type: constants.geojsonTypes.FEATURE,
+                        properties: { distance: state.distance },
+                        geometry: {
+                            type: constants.geojsonTypes.POINT,
+                            coordinates: [evt.lngLat.lng, evt.lngLat.lat],
+                        },
+                    })
+                );
             state.line.updateCoordinate(
                 state.currentVertexPosition.toString(),
                 evt.lngLat.lng,
@@ -287,15 +303,7 @@ const LineStringAssistedMode: DrawCustomMode & {
         geojson: MapGeoJSONFeature & { geometry: { coordinates: Position[] } },
         display
     ) {
-        const isActiveLine = geojson.properties.id == state.line.id;
-        geojson.properties.active = isActiveLine
-            ? constants.activeStates.ACTIVE
-            : constants.activeStates.INACTIVE;
-
-        if (!isActiveLine) return display(geojson);
-        if (geojson.geometry.coordinates.length < 2) return;
-        geojson.properties.meta = constants.meta.FEATURE;
-        const distance = `${round(length(geojson), 2)} km`;
+        state.distance = round(length(geojson), 2);
         display(
             createVertex(
                 state.line.id.toString(),
@@ -309,8 +317,19 @@ const LineStringAssistedMode: DrawCustomMode & {
                         ? geojson.geometry.coordinates.length - 1
                         : 1
                 }`,
-                distance
+                `${state.distance} km`
             )
+        );
+        const isActiveLine = geojson.properties.id == state.line.id;
+        geojson.properties.active = isActiveLine
+            ? constants.activeStates.ACTIVE
+            : constants.activeStates.INACTIVE;
+
+        if (!isActiveLine) return display(geojson);
+        if (geojson.geometry.coordinates.length < 2) return;
+        geojson.properties.meta = constants.meta.FEATURE;
+        state.vertexPositions.forEach((vertex, index) =>
+            display(vertex.toGeoJSON())
         );
         display(geojson);
     },

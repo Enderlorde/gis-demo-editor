@@ -34,9 +34,19 @@ const App = () => {
 
     const onMapLoad = () => {
         mapRef.current
-            .loadImage("./static/bubble.png")
+            .loadImage(
+                "https://maplibre.org/maplibre-gl-js/docs/assets/popup.png"
+            )
             .then((response) =>
-                mapRef.current.addImage("bubble", response.data)
+                mapRef.current.addImage("popup", response.data, {
+                    stretchX: [
+                        [25, 55],
+                        [85, 115],
+                    ],
+                    stretchY: [[25, 100]],
+                    content: [25, 25, 115, 100],
+                    pixelRatio: 2,
+                })
             );
         mapRef.current
             .loadImage("./static/45.png")
@@ -145,6 +155,21 @@ const App = () => {
                             "text-field": ["get", "distance"],
                             "text-font": ["noto_sans_regular"],
                             "text-offset": [0, -2],
+                            "text-anchor": "bottom",
+                            "text-allow-overlap": true,
+                            "icon-image": "popup",
+                            "icon-allow-overlap": true,
+                            "icon-anchor": "bottom",
+                            "icon-text-fit": "both",
+                            "symbol-z-order": "viewport-y",
+                        },
+                        paint: {
+                            "text-halo-color": "#ffffff",
+                            "text-halo-width": 2,
+                            "icon-halo-color": "#000000",
+                            "icon-halo-width": 2,
+                            "icon-halo-blur": 5,
+                            "icon-opacity": 0.5,
                         },
                     },
                     {
