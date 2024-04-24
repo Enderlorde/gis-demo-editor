@@ -67,6 +67,8 @@ const App = () => {
     };
 
     const onUpdate = useCallback((e, mbd) => {
+        console.log(e);
+
         mbd.setFeatureProperty(e.features[0].id, "fill", ref.current);
 
         setFeatures((currFeatures) => {
@@ -140,6 +142,8 @@ const App = () => {
                     polygon: true,
                     line_string: true,
                     trash: true,
+                    combine_features: true,
+                    uncombine_features: true,
                 }}
                 userProperties={true}
                 styles={[
@@ -149,12 +153,49 @@ const App = () => {
                         filter: [
                             "all",
                             ["==", "$type", "Point"],
-                            ["has", "distance"],
+                            [
+                                "any",
+                                ["has", "distance"],
+                                ["has", "user_distance"],
+                            ],
                         ],
                         layout: {
-                            "text-field": ["get", "distance"],
+                            "text-field": [
+                                "coalesce",
+                                ["get", "user_distance"],
+                                ["get", "distance"],
+                            ],
                             "text-font": ["noto_sans_regular"],
                             "text-offset": [0, -2],
+                            "text-anchor": "bottom",
+                            "text-allow-overlap": true,
+                            "icon-image": "popup",
+                            "icon-allow-overlap": true,
+                            "icon-anchor": "bottom",
+                            "icon-text-fit": "both",
+                            "symbol-z-order": "viewport-y",
+                        },
+                        paint: {
+                            "text-halo-color": "#ffffff",
+                            "text-halo-width": 2,
+                            "icon-halo-color": "#000000",
+                            "icon-halo-width": 2,
+                            "icon-halo-blur": 5,
+                            "icon-opacity": 0.5,
+                        },
+                    },
+                    {
+                        id: "gl-draw-point-length",
+                        type: "symbol",
+                        filter: [
+                            "all",
+                            ["==", "$type", "Point"],
+                            ["has", "length"],
+                        ],
+                        layout: {
+                            "text-field": ["get", "length"],
+                            "text-font": ["noto_sans_regular"],
+                            "text-offset": [0, -1],
                             "text-anchor": "bottom",
                             "text-allow-overlap": true,
                             "icon-image": "popup",
@@ -177,7 +218,7 @@ const App = () => {
                         type: "circle",
                         filter: ["all", ["==", "$type", "Point"]],
                         paint: {
-                            "circle-radius": 7,
+                            "circle-radius": 3,
                             "circle-color": "#000",
                         },
                     },

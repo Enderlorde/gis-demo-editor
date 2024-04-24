@@ -1,9 +1,17 @@
 import {
     DrawCustomMode,
     DrawLineString,
+    DrawMultiFeature,
     constants,
 } from "@mapbox/mapbox-gl-draw";
-import type { Point, Feature, Position, FeatureCollection } from "geojson";
+import type {
+    Point,
+    Feature,
+    Position,
+    FeatureCollection,
+    GeoJsonObject,
+    MultiLineString,
+} from "geojson";
 import { MapMouseEvent } from "@mapbox/mapbox-gl-draw";
 import { MapGeoJSONFeature, MapboxGeoJSONFeature } from "react-map-gl";
 import midpoint from "@turf/midpoint";
@@ -22,7 +30,7 @@ type State = {
     line?: DrawLineString;
     currentVertexPosition?: number;
     direction?: string;
-    vertexPositions?: MapGeoJSONFeature[];
+    vertexPositions?: MapboxDraw.DrawFeatureBase<Position[]>[];
     distance?: number;
 };
 
@@ -31,6 +39,31 @@ const isEventAtCoordinates = (evt: MapMouseEvent, coordinates: Position) => {
     return (
         evt.lngLat.lng === coordinates[0] && evt.lngLat.lat === coordinates[1]
     );
+};
+
+const createMidpoints = (
+    feature: MapboxDraw.DrawFeatureBase<Position[]>
+): GeoJsonObject & MapGeoJSONFeature[] => {
+    /* console.log(feature.coordinates); */
+    if (feature.coordinates.length > 1) {
+        let segments: number[][][] = [];
+
+        for (let i = 0; i < feature.coordinates.length - 1; i++) {
+            segments.push([feature.coordinates[i], feature.coordinates[i + 1]]);
+        }
+        let midpoints = <GeoJsonObject & MapGeoJSONFeature[]>[];
+        segments.forEach((segment, i) => {
+            const midpointFeature = <GeoJsonObject & MapGeoJSONFeature>(
+                midpoint(segment[0], segment[1])
+            );
+            midpointFeature.properties["length"] = round(
+                distance(segment[0], segment[1]),
+                2
+            );
+            midpoints.push(midpointFeature);
+        });
+        return midpoints;
+    }
 };
 
 const isVertex = (e): boolean => {
@@ -65,7 +98,7 @@ const createVertex = (
         },
         geometry: {
             type: constants.geojsonTypes.POINT,
-            coordinates,
+            coordinates: coordinates,
         },
     };
 };
@@ -167,11 +200,11 @@ const LineStringAssistedMode: DrawCustomMode & {
             mouse: constants.cursors.ADD,
         }); */
         /* this.activateUIButton(constants.types.LINE); */
-        /* this.setActionableState({
-            trash: false,
-            combineFeatures: false,
-            uncombineFeatures: false,
-        }); */
+        this.setActionableState({
+            trash: true,
+            combineFeatures: true,
+            uncombineFeatures: true,
+        });
 
         return {
             line,
@@ -209,9 +242,12 @@ const LineStringAssistedMode: DrawCustomMode & {
             evt.lngLat.lng,
             evt.lngLat.lat
         );
-        if (state.direction === "forward") {
+        if (
+            state.direction === "forward" ||
+            state.currentVertexPosition === 1
+        ) {
             state.currentVertexPosition++;
-            if (state.currentVertexPosition > 1)
+            if (state.currentVertexPosition > 1) {
                 state.vertexPositions.push(
                     this.newFeature({
                         type: constants.geojsonTypes.FEATURE,
@@ -222,6 +258,20 @@ const LineStringAssistedMode: DrawCustomMode & {
                         },
                     })
                 );
+                this.addFeature(
+                    this.newFeature({
+                        type: constants.geojsonTypes.FEATURE,
+                        properties: {
+                            distance: state.distance,
+                            parent: state.line.id,
+                        },
+                        geometry: {
+                            type: constants.geojsonTypes.POINT,
+                            coordinates: [evt.lngLat.lng, evt.lngLat.lat],
+                        },
+                    })
+                );
+            }
             state.line.updateCoordinate(
                 state.currentVertexPosition.toString(),
                 evt.lngLat.lng,
@@ -303,34 +353,38 @@ const LineStringAssistedMode: DrawCustomMode & {
         geojson: MapGeoJSONFeature & { geometry: { coordinates: Position[] } },
         display
     ) {
-        state.distance = round(length(geojson), 2);
-        display(
-            createVertex(
-                state.line.id.toString(),
-                geojson.geometry.coordinates[
-                    state.direction === "forward"
-                        ? geojson.geometry.coordinates.length - 1
-                        : 1
-                ],
-                `${
-                    state.direction === "forward"
-                        ? geojson.geometry.coordinates.length - 1
-                        : 1
-                }`,
-                `${state.distance} km`
-            )
-        );
         const isActiveLine = geojson.properties.id == state.line.id;
         geojson.properties.active = isActiveLine
             ? constants.activeStates.ACTIVE
             : constants.activeStates.INACTIVE;
 
         if (!isActiveLine) return display(geojson);
+        state.distance = round(length(geojson), 2);
+        if (geojson.geometry.coordinates.length > 1)
+            display(
+                createVertex(
+                    state.line.id.toString(),
+                    geojson.geometry.coordinates[
+                        state.direction === "forward"
+                            ? geojson.geometry.coordinates.length - 1
+                            : 1
+                    ],
+                    `${
+                        state.direction === "forward"
+                            ? geojson.geometry.coordinates.length - 1
+                            : 1
+                    }`,
+                    `${state.distance} km`
+                )
+            );
+
         if (geojson.geometry.coordinates.length < 2) return;
         geojson.properties.meta = constants.meta.FEATURE;
-        state.vertexPositions.forEach((vertex, index) =>
+        /*  state.vertexPositions.forEach((vertex, index) =>
             display(vertex.toGeoJSON())
-        );
+        ); */
+        /*  createMidpoints(state.line).forEach((midpoint) => display(midpoint)); */
+
         display(geojson);
     },
 };
