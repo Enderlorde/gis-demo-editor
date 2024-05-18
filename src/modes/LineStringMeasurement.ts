@@ -16,6 +16,7 @@ import { MapMouseEvent } from "@mapbox/mapbox-gl-draw";
 import { MapGeoJSONFeature, MapboxGeoJSONFeature } from "react-map-gl";
 import midpoint from "@turf/midpoint";
 import length from "@turf/length";
+import * as helpers from "@turf/helpers";
 import { round } from "@turf/helpers";
 import distance from "@turf/distance";
 
@@ -31,7 +32,7 @@ type State = {
     currentVertexPosition?: number;
     direction?: string;
     vertexPositions?: MapboxDraw.DrawFeatureBase<Position[]>[];
-    distance?: number;
+    distance?: string;
 };
 
 const isEventAtCoordinates = (evt: MapMouseEvent, coordinates: Position) => {
@@ -39,6 +40,21 @@ const isEventAtCoordinates = (evt: MapMouseEvent, coordinates: Position) => {
     return (
         evt.lngLat.lng === coordinates[0] && evt.lngLat.lat === coordinates[1]
     );
+};
+
+const convertMeasure = (length) => {
+    const measures = [
+        { measure: "centimeters", name: "см" },
+        { measure: "meters", name: "м" },
+        { measure: "kilometers", name: "км" },
+    ];
+
+    const finalUnit = measures[length > 1 ? 2 : length > 0.001 ? 1 : 0];
+
+    return `${round(
+        helpers.convertLength(length, measures[2].measure, finalUnit.measure),
+        2
+    )} ${finalUnit.name}`;
 };
 
 const createMidpoints = (
@@ -56,9 +72,8 @@ const createMidpoints = (
             const midpointFeature = <GeoJsonObject & MapGeoJSONFeature>(
                 midpoint(segment[0], segment[1])
             );
-            midpointFeature.properties["length"] = round(
-                distance(segment[0], segment[1]),
-                2
+            midpointFeature.properties["length"] = convertMeasure(
+                distance(segment[0], segment[1])
             );
             midpoints.push(midpointFeature);
         });
@@ -114,7 +129,7 @@ const LineStringAssistedMode: DrawCustomMode & {
 
         let line: DrawLineString, currentVertexPosition, vertexPositions;
         let direction: string = "forward";
-        let distance = 0;
+        let distance = "0";
 
         //Если из предыдущего режима передан featureId - продолжить рисование линии из точки from
         if (featureId) {
@@ -196,10 +211,7 @@ const LineStringAssistedMode: DrawCustomMode & {
         }
 
         this.clearSelectedFeatures();
-        /* this.updateUIClasses({
-            mouse: constants.cursors.ADD,
-        }); */
-        /* this.activateUIButton(constants.types.LINE); */
+
         this.setActionableState({
             trash: true,
             combineFeatures: true,
@@ -235,8 +247,6 @@ const LineStringAssistedMode: DrawCustomMode & {
             });
         }
 
-        //
-        /* this.updateUIClasses({ mouse: constants.cursors.ADD }); */
         state.line.updateCoordinate(
             state.currentVertexPosition.toString(),
             evt.lngLat.lng,
@@ -252,19 +262,6 @@ const LineStringAssistedMode: DrawCustomMode & {
                     this.newFeature({
                         type: constants.geojsonTypes.FEATURE,
                         properties: { distance: state.distance },
-                        geometry: {
-                            type: constants.geojsonTypes.POINT,
-                            coordinates: [evt.lngLat.lng, evt.lngLat.lat],
-                        },
-                    })
-                );
-                this.addFeature(
-                    this.newFeature({
-                        type: constants.geojsonTypes.FEATURE,
-                        properties: {
-                            distance: state.distance,
-                            parent: state.line.id,
-                        },
                         geometry: {
                             type: constants.geojsonTypes.POINT,
                             coordinates: [evt.lngLat.lng, evt.lngLat.lat],
@@ -296,12 +293,8 @@ const LineStringAssistedMode: DrawCustomMode & {
             evt.lngLat.lng,
             evt.lngLat.lat
         );
+        state.distance = convertMeasure(length(state.line));
         evt.target.getCanvas().style.cursor = "crosshair";
-        if (isVertex(evt)) {
-            console.log("VERTEX!");
-            evt.target.getCanvas().style.cursor = "pointer";
-            /* this.updateUIClasses({ mouse: constants.cursors.POINTER }); */
-        }
     },
 
     onClick(state: State, evt: MapMouseEvent) {
@@ -324,23 +317,12 @@ const LineStringAssistedMode: DrawCustomMode & {
     },
 
     onStop(state: State) {
-        /* this.activateUIButton(); */
         if (this.getFeature(state.line.id.toString()) === undefined) return;
 
         state.line.removeCoordinate(`${state.currentVertexPosition}`);
 
-        if (state.line.isValid()) {
-            this.map.fire(constants.events.CREATE, {
-                features: [state.line.toGeoJSON()],
-            });
-        } else {
-            this.deleteFeature(state.line.id.toString(), { silent: true });
-            this.changeMode(
-                constants.modes.SIMPLE_SELECT,
-                {},
-                { silent: true }
-            );
-        }
+        this.deleteFeature(state.line.id.toString(), { silent: true });
+        this.changeMode(constants.modes.SIMPLE_SELECT, {}, { silent: true });
     },
 
     onTrash(state: State) {
@@ -359,7 +341,7 @@ const LineStringAssistedMode: DrawCustomMode & {
             : constants.activeStates.INACTIVE;
 
         if (!isActiveLine) return display(geojson);
-        state.distance = round(length(geojson), 2);
+
         if (geojson.geometry.coordinates.length > 1)
             display(
                 createVertex(
@@ -374,16 +356,14 @@ const LineStringAssistedMode: DrawCustomMode & {
                             ? geojson.geometry.coordinates.length - 1
                             : 1
                     }`,
-                    `${state.distance} km`
+                    `${state.distance}`
                 )
             );
 
         if (geojson.geometry.coordinates.length < 2) return;
         geojson.properties.meta = constants.meta.FEATURE;
-        /*  state.vertexPositions.forEach((vertex, index) =>
-            display(vertex.toGeoJSON())
-        ); */
-        /*  createMidpoints(state.line).forEach((midpoint) => display(midpoint)); */
+
+        createMidpoints(state.line).forEach((midpoint) => display(midpoint));
 
         display(geojson);
     },

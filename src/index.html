@@ -6,6 +6,36 @@
             name="viewport"
             content="width=device-width, initial-scale=1.0"
         />
+        <style>
+            .maplibregl-ctrl-top-left{
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                padding: 15px;
+            }
+
+            .mapboxgl-ctrl{
+                display: flex;
+                flex-direction: row;
+            }
+
+            .mapboxgl-ctrl-group{
+                opacity: 0.5;
+                transition: opacity 0.3s ease-in-out;
+            }
+
+            .mapboxgl-ctrl-group:hover{
+                opacity: 1;
+            }
+
+            .mapboxgl-ctrl-group button{
+                border: 0 !important;
+            }
+        </style>
         <title>Editor demo</title>
     </head>
     <body>

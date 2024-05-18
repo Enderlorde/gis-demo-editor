@@ -1,5 +1,5 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { useControl } from "react-map-gl";
+import { useControl } from "react-map-gl/maplibre";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import type { ControlPosition } from "react-map-gl";
 

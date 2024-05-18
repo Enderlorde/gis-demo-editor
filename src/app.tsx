@@ -4,17 +4,13 @@ import ReactDOM from "react-dom/client";
 import { Map, ScaleControl } from "react-map-gl/maplibre";
 import type { MapRef } from "react-map-gl/maplibre";
 
-import RadiusMode from "./radius-mode.ts";
-
-import Dropdown from "./components/dropdown/dropdown.tsx";
-
 import "maplibre-gl/dist/maplibre-gl.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import DrawControl from "./components/draw-control/draw-control.ts";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 
-import LineStringAssisted from "./modes/LineStringAssisted.ts";
+import LineStringMeasurement from "./modes/LineStringMeasurement.ts";
 
 const App = () => {
     const [features, setFeatures] = useState({});
@@ -98,6 +94,8 @@ const App = () => {
     return (
         <Map
             onLoad={() => onMapLoad()}
+            reuseMaps={true}
+            collectResourceTiming={true}
             ref={mapRef}
             id="map"
             initialViewState={{
@@ -135,6 +133,7 @@ const App = () => {
             maxBounds={[23.027, 51.161, 32.981, 56.292]}
         >
             <DrawControl
+                //top-left отцентрован на верхней границе т.к. из коробки такое положение не предусмотренно
                 position="top-left"
                 displayControlsDefault={false}
                 controls={{
@@ -142,8 +141,6 @@ const App = () => {
                     polygon: true,
                     line_string: true,
                     trash: true,
-                    combine_features: true,
-                    uncombine_features: true,
                 }}
                 userProperties={true}
                 styles={[
@@ -165,7 +162,7 @@ const App = () => {
                                 ["get", "user_distance"],
                                 ["get", "distance"],
                             ],
-                            "text-font": ["noto_sans_regular"],
+                            "text-font": ["fira_sans_regular"],
                             "text-offset": [0, -2],
                             "text-anchor": "bottom",
                             "text-allow-overlap": true,
@@ -194,8 +191,8 @@ const App = () => {
                         ],
                         layout: {
                             "text-field": ["get", "length"],
-                            "text-font": ["noto_sans_regular"],
-                            "text-offset": [0, -1],
+                            "text-font": ["fira_sans_regular"],
+                            "text-offset": [0, -2],
                             "text-anchor": "bottom",
                             "text-allow-overlap": true,
                             "icon-image": "popup",
@@ -219,7 +216,7 @@ const App = () => {
                         filter: ["all", ["==", "$type", "Point"]],
                         paint: {
                             "circle-radius": 3,
-                            "circle-color": "#000",
+                            "circle-color": "#4F6D7A",
                         },
                     },
                     // ACTIVE (being drawn)
@@ -237,7 +234,7 @@ const App = () => {
                             "line-join": "round",
                         },
                         paint: {
-                            "line-color": "#D20C0C",
+                            "line-color": "#4A6FA5",
                             "line-dasharray": [0.2, 2],
                             "line-width": 2,
                         },
@@ -337,8 +334,8 @@ const App = () => {
                             "line-join": "round",
                         },
                         paint: {
-                            "line-color": "#000",
-                            "line-width": 3,
+                            "line-color": "#4F6D7A",
+                            "line-width": 2,
                         },
                     },
                     // polygon fill
@@ -391,19 +388,15 @@ const App = () => {
                 ]}
                 modes={{
                     ...MapboxDraw.modes,
-                    ["draw_assisted_line_string"]: LineStringAssisted,
+                    ["measurement_line_string"]: LineStringMeasurement,
                 }}
-                defaultMode="draw_assisted_line_string"
+                defaultMode="measurement_line_string"
                 onCreate={onUpdate}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
                 onModeChange={modeChangeHandler}
             />
-            <Dropdown
-                onChange={(e) => {
-                    setColor(e.target.value);
-                }}
-            />
+
             <ScaleControl />
         </Map>
     );
