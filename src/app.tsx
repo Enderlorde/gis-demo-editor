@@ -11,6 +11,8 @@ import DrawControl from "./components/draw-control/draw-control.ts";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 
 import LineStringMeasurement from "./modes/LineStringMeasurement.ts";
+import extendedPolygonMode from "./modes/extendedPolygonMode.js";
+import area_measurement_mode from "./modes/area_measurement_mode.js";
 
 const App = () => {
     const [features, setFeatures] = useState({});
@@ -29,6 +31,7 @@ const App = () => {
     }, [color]);
 
     const onMapLoad = () => {
+        mapRef.current.resize();
         mapRef.current
             .loadImage(
                 "https://maplibre.org/maplibre-gl-js/docs/assets/popup.png"
@@ -94,18 +97,12 @@ const App = () => {
     return (
         <Map
             onLoad={() => onMapLoad()}
-            reuseMaps={true}
-            collectResourceTiming={true}
             ref={mapRef}
             id="map"
             initialViewState={{
                 longitude: 27.55874,
                 latitude: 53.9012,
                 zoom: 7,
-            }}
-            style={{
-                width: 640,
-                height: 480,
             }}
             mapStyle={{
                 version: 8,
@@ -288,6 +285,36 @@ const App = () => {
                             "line-width": 2,
                         },
                     },
+                    {
+                        id: "gl-draw-polygon-stroke-active-text",
+                        type: "symbol",
+                        filter: [
+                            "all",
+                            ["==", "$type", "Polygon"],
+                            ["==", "active", "true"],
+                            ["has", "user_distance"],
+                        ],
+                        layout: {
+                            "text-field": ["get", "user_distance"],
+                            "text-font": ["fira_sans_regular"],
+                            "text-offset": [0, -2],
+                            "text-anchor": "bottom",
+                            "text-allow-overlap": true,
+                            "icon-image": "popup",
+                            "icon-allow-overlap": true,
+                            "icon-anchor": "bottom",
+                            "icon-text-fit": "both",
+                            "symbol-z-order": "viewport-y",
+                        },
+                        paint: {
+                            "text-halo-color": "#ffffff",
+                            "text-halo-width": 2,
+                            "icon-halo-color": "#000000",
+                            "icon-halo-width": 2,
+                            "icon-halo-blur": 5,
+                            "icon-opacity": 0.5,
+                        },
+                    },
                     // vertex point halos
                     {
                         id: "gl-draw-polygon-and-line-vertex-halo-active",
@@ -389,8 +416,10 @@ const App = () => {
                 modes={{
                     ...MapboxDraw.modes,
                     ["measurement_line_string"]: LineStringMeasurement,
+                    ["extended_polygon_mode"]: extendedPolygonMode,
+                    ["area_measurement_mode"]: area_measurement_mode,
                 }}
-                defaultMode="measurement_line_string"
+                defaultMode="area_measurement_mode"
                 onCreate={onUpdate}
                 onUpdate={onUpdate}
                 onDelete={onDelete}
