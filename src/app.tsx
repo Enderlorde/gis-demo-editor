@@ -286,35 +286,24 @@ const App = () => {
                         },
                     },
                     {
-                        id: "gl-draw-polygon-stroke-active-text",
+                        id: "gl-draw-polygon-area",
                         type: "symbol",
                         filter: [
                             "all",
                             ["==", "$type", "Polygon"],
-                            ["==", "active", "true"],
-                            ["has", "user_distance"],
+                            ["has", "user_area"],
                         ],
                         layout: {
-                            "text-field": ["get", "user_distance"],
+                            "text-field": ["get", "user_area"],
                             "text-font": ["fira_sans_regular"],
-                            "text-offset": [0, -2],
-                            "text-anchor": "bottom",
                             "text-allow-overlap": true,
-                            "icon-image": "popup",
-                            "icon-allow-overlap": true,
-                            "icon-anchor": "bottom",
-                            "icon-text-fit": "both",
-                            "symbol-z-order": "viewport-y",
                         },
                         paint: {
                             "text-halo-color": "#ffffff",
                             "text-halo-width": 2,
-                            "icon-halo-color": "#000000",
-                            "icon-halo-width": 2,
-                            "icon-halo-blur": 5,
-                            "icon-opacity": 0.5,
                         },
                     },
+
                     // vertex point halos
                     {
                         id: "gl-draw-polygon-and-line-vertex-halo-active",
@@ -415,8 +404,6 @@ const App = () => {
                 ]}
                 modes={{
                     ...MapboxDraw.modes,
-                    ["measurement_line_string"]: LineStringMeasurement,
-                    ["extended_polygon_mode"]: extendedPolygonMode,
                     ["area_measurement_mode"]: area_measurement_mode,
                 }}
                 defaultMode="area_measurement_mode"

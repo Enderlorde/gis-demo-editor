@@ -12,6 +12,7 @@
         "@turf/distance": "^6.5.0",
         "@turf/helpers": "^6.5.0",
         "@turf/length": "^6.5.0",
+        "@turf/line-to-polygon": "^6.5.0",
         "@turf/midpoint": "^6.5.0",
         "@turf/turf": "^6.5.0",
         "framer-motion": "^11.2.2",
