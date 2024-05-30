@@ -12,7 +12,9 @@ import area from "@turf/area";
 import length from "@turf/length";
 
 const DrawArea = {
+    //При переходе в этот режим
     onSetup() {
+        // Создаем пустой draw feature линии
         const line = this.newFeature({
             type: Constants.geojsonTypes.FEATURE,
             properties: {},
@@ -21,15 +23,24 @@ const DrawArea = {
                 coordinates: [[]],
             },
         });
+
+        // Переменная в которой хранится feature полигона
+        // TODO: Подумать как его удалить отсюда, выглядит неаккуратно
         const polygon = {};
 
+        //Добавляем draw feature на слой рисования
         this.addFeature(line);
 
         this.clearSelectedFeatures();
         doubleClickZoom.disable(this);
-        this.updateUIClasses({ mouse: Constants.cursors.ADD });
 
+        // TODO: Подумать над способом реализации
+        /* this.updateUIClasses({ mouse: Constants.cursors.ADD }); */
+
+        // Подсвечиваем кнопку режима в UI
         this.activateUIButton(Constants.types.POLYGON);
+
+        // Устанавливаем, какие действия допустимы в этом режиме
         this.setActionableState({
             trash: true,
             combineFeatures: false,
@@ -44,6 +55,7 @@ const DrawArea = {
         };
     },
 
+    // По клику где-либо на карте если линия не замкнута добавляем точку, если линия замкнута и преобразована в полигон - удаляем полигон и выходим в режим SIMPLE_SELECT
     clickAnywhere(state, e) {
         /* if (
             state.currentVertexPosition > 0 &&
@@ -58,39 +70,25 @@ const DrawArea = {
         } */
         /* this.updateUIClasses({ mouse: Constants.cursors.ADD }); */
         if (state.mode === "line") {
-            console.log(state.line);
-            if (state.line) {
-                state.line.updateCoordinate(
-                    state.currentVertexPosition.toString(),
-                    e.lngLat.lng,
-                    e.lngLat.lat
-                );
-                state.currentVertexPosition++;
-                state.line.updateCoordinate(
-                    state.currentVertexPosition.toString(),
-                    e.lngLat.lng,
-                    e.lngLat.lat
-                );
-            } else {
-                state.line = this.newFeature({
-                    type: Constants.geojsonTypes.FEATURE,
-                    properties: {},
-                    geometry: {
-                        type: Constants.geojsonTypes.LINE_STRING,
-                        coordinates: [[]],
-                    },
-                });
-
-                this.addFeature(line);
-            }
+            state.line.updateCoordinate(
+                state.currentVertexPosition.toString(),
+                e.lngLat.lng,
+                e.lngLat.lat
+            );
+            state.currentVertexPosition++;
+            state.line.updateCoordinate(
+                state.currentVertexPosition.toString(),
+                e.lngLat.lng,
+                e.lngLat.lat
+            );
         } else {
             this.deleteFeature([state.polygon.id], { silent: true });
-            state.mode = "line";
+            this.changeMode(Constants.modes.SIMPLE_SELECT);
         }
     },
 
+    //Срабатывает если выбрана вершина, и если она является первой точкой - замыкаем линию и преобразуем ее в полигон, после вычисляем его площадь и периметр
     clickOnVertex(state, e) {
-        //Если выбранная вершина совпадает с начальной замыкаем линию и преобразуем ее в полигон, после вычисляем его площадь и периметр
         if (
             state.mode === "line" &&
             state.currentVertexPosition > 2 &&
@@ -119,6 +117,7 @@ const DrawArea = {
         }
     },
 
+    //При каждом движении мыши обновляем крайнюю точку если линия не замкнута
     onMouseMove(state, e) {
         if (state.mode === "line" && state.line) {
             state.line.updateCoordinate(
@@ -127,11 +126,7 @@ const DrawArea = {
                 e.lngLat.lat
             );
 
-            if (state.currentVertexPosition > 0)
-                state.line.properties["distance"] = distance(
-                    state.line.coordinates[state.currentVertexPosition - 1],
-                    state.line.coordinates[state.currentVertexPosition]
-                );
+            // Меняем стиль курсора по наведению на вершину
             if (CommonSelectors.isVertex(e)) {
                 e.target.getCanvas().style.cursor = "pointer";
             } else {
@@ -140,12 +135,14 @@ const DrawArea = {
         }
     },
 
+    // По клику проверяем, произошел клик по вершине или в случайном месте на карте
     onClick(state, e) {
         if (CommonSelectors.isVertex(e) && state.currentVertexPosition > 0)
             return this.clickOnVertex(state, e);
         return this.clickAnywhere(state, e);
     },
 
+    //По нажатию на ESC удаляем draw feature линии и полигона и переходим в режим SIMPLE_SELECT
     onKeyUp(state, e) {
         if (CommonSelectors.isEscapeKey(e)) {
             if (state.mode === "line") {
@@ -153,8 +150,6 @@ const DrawArea = {
             } else {
                 this.deleteFeature([state.polygon.id], { silent: true });
             }
-            this.changeMode(Constants.modes.SIMPLE_SELECT);
-        } else if (CommonSelectors.isEnterKey(e)) {
             this.changeMode(Constants.modes.SIMPLE_SELECT);
         }
     },
@@ -176,6 +171,10 @@ const DrawArea = {
         /* this.changeMode(Constants.modes.SIMPLE_SELECT); */
     },
 
+    //This is the only required function for a mode.
+    // It decides which features currently in Draw's data store will be rendered on the map.
+    // All features passed to `display` will be rendered, so you can pass multiple display features per internal feature.
+    // See `styling-draw` in `API.md` for advice on making display features
     toDisplayFeatures(state, geojson, display) {
         if (state.mode === "line") {
             const isActiveLine = geojson.properties.id === state.line.id;
