@@ -17,7 +17,6 @@ export default function DrawControl(props: DrawControlProps) {
     useControl<MapboxDraw>(
         () => {
             mbd = new MapboxDraw(props);
-            console.log(mbd);
 
             return mbd;
         },

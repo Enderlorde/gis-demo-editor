@@ -8,10 +8,9 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import DrawControl from "./components/draw-control/draw-control.ts";
+import LoadingControl from "./components/loading-control/loading-control.ts";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 
-import LineStringMeasurement from "./modes/LineStringMeasurement.ts";
-import extendedPolygonMode from "./modes/extendedPolygonMode.js";
 import area_measurement_mode from "./modes/area_measurement_mode.js";
 
 const App = () => {
@@ -21,17 +20,16 @@ const App = () => {
     const mapRef = useRef<MapRef>();
     const ref = useRef(color);
 
-    useEffect(() => {
-        console.log(features);
-    }, [features]);
+    useEffect(() => {}, [features]);
 
     useEffect(() => {
-        console.log(color);
         ref.current = color;
     }, [color]);
 
     const onMapLoad = () => {
         mapRef.current.resize();
+        console.log("Loaded!");
+
         mapRef.current
             .loadImage(
                 "https://maplibre.org/maplibre-gl-js/docs/assets/popup.png"
@@ -66,8 +64,6 @@ const App = () => {
     };
 
     const onUpdate = useCallback((e, mbd) => {
-        console.log(e);
-
         mbd.setFeatureProperty(e.features[0].id, "fill", ref.current);
 
         setFeatures((currFeatures) => {
@@ -129,6 +125,7 @@ const App = () => {
             }}
             maxBounds={[23.027, 51.161, 32.981, 56.292]}
         >
+            <LoadingControl position="bottom-right" />
             <DrawControl
                 //top-left отцентрован на верхней границе т.к. из коробки такое положение не предусмотренно
                 position="top-left"
@@ -290,7 +287,7 @@ const App = () => {
                         type: "symbol",
                         filter: [
                             "all",
-                            ["==", "$type", "Polygon"],
+                            ["==", "$type", "Point"],
                             ["has", "user_area"],
                         ],
                         layout: {

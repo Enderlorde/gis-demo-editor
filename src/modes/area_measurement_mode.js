@@ -1,15 +1,13 @@
 import * as CommonSelectors from "../lib/common_selectors.js";
 import doubleClickZoom from "../lib/double_click_zoom.js";
 import { constants as Constants } from "@mapbox/mapbox-gl-draw";
-import isEventAtCoordinates from "../lib/is_event_at_coordinates.js";
 import createVertex from "../lib/create_vertex.js";
 
 import * as _ from "lodash";
 import lineToPolygon from "@turf/line-to-polygon";
-
-import distance from "@turf/distance";
 import area from "@turf/area";
 import length from "@turf/length";
+import centerOfMass from "@turf/center-of-mass";
 
 const DrawArea = {
     //При переходе в этот режим
@@ -57,17 +55,6 @@ const DrawArea = {
 
     // По клику где-либо на карте если линия не замкнута добавляем точку, если линия замкнута и преобразована в полигон - удаляем полигон и выходим в режим SIMPLE_SELECT
     clickAnywhere(state, e) {
-        /* if (
-            state.currentVertexPosition > 0 &&
-            isEventAtCoordinates(
-                e,
-                state.line.coordinates[state.currentVertexPosition - 1]
-            )
-        ) {
-            return this.changeMode(Constants.modes.SIMPLE_SELECT, {
-                featureIds: [state.line.id],
-            });
-        } */
         /* this.updateUIClasses({ mouse: Constants.cursors.ADD }); */
         if (state.mode === "line") {
             state.line.updateCoordinate(
@@ -105,8 +92,8 @@ const DrawArea = {
                 state.polygon = this.newFeature({
                     ...polygon,
                     properties: {
-                        area: `${area(polygon)} m2`,
-                        length: `${length(state.line)} m`,
+                        area: `${area(polygon)} м2`,
+                        length: `${length(state.line)} км`,
                     },
                 });
                 this.deleteFeature([state.line.id], { silent: true });
@@ -192,19 +179,14 @@ const DrawArea = {
                 : Constants.activeStates.INACTIVE;
             if (!isActivePolygon) return display(geojson);
         }
-        /*  display(
-            createVertex(
-                state.line.id,
-                geojson.geometry.coordinates[state.currentVertexPosition]
-            )
-        ); */
         //Создаем точку в начале линии
         if (state.mode !== "polygon") {
             display(
                 createVertex(
                     state.line.id,
                     geojson.geometry.coordinates[0],
-                    "0"
+                    "0",
+                    false
                 )
             );
         }
@@ -214,50 +196,22 @@ const DrawArea = {
                     state.polygon.id,
                     geojson.geometry.coordinates[0][0],
                     "0",
+                    true,
                     false,
                     { length: state.polygon.properties["length"] }
                 )
             );
-        }
-        /* if (coordinateCount > 3) {
-            // Add a start position marker to the map, clicking on this will finish the feature
-            // This should only be shown when we're in a valid spot
-            const endPos = geojson.geometry.coordinates.length - 3;
             display(
                 createVertex(
-                    state.line.id,
-                    geojson.geometry.coordinates[endPos],
-                    `0.${endPos}`,
-                    false
+                    state.polygon.id,
+                    centerOfMass(state.polygon).geometry.coordinates,
+                    "0",
+                    true,
+                    false,
+                    { length: state.polygon.properties["area"] }
                 )
             );
-        } */
-        /* if (coordinateCount <= 4) {
-            // If we've only drawn two positions (plus the closer),
-            // make a LineString instead of a Polygon
-            const lineCoordinates = [
-                [
-                    geojson.geometry.coordinates[0][0],
-                    geojson.geometry.coordinates[0][1],
-                ],
-                [
-                    geojson.geometry.coordinates[1][0],
-                    geojson.geometry.coordinates[1][1],
-                ],
-            ];
-            // create an initial vertex so that we can track the first point on mobile devices
-            display({
-                type: Constants.geojsonTypes.FEATURE,
-                properties: geojson.properties,
-                geometry: {
-                    coordinates: lineCoordinates,
-                    type: Constants.geojsonTypes.LINE_STRING,
-                },
-            });
-            if (coordinateCount === 3) {
-                return;
-            }
-        } */
+        }
         // render the Polygon
         display(geojson);
     },
